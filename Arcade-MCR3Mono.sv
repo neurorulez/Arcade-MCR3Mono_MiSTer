@@ -95,12 +95,18 @@ module emu
 	// 1 - D-/TX
 	// 2..6 - USR2..USR6
 	// Set USER_OUT to 1 to read from USER_IN.
-	input   [6:0] USER_IN,
-	output  [6:0] USER_OUT
+    output	      USER_MODE,	
+	input   [7:0] USER_IN,
+	output  [7:0] USER_OUT
 );
 
 assign VGA_F1    = 0;
-assign USER_OUT  = '1;
+
+wire   joy_split, joy_mdsel;
+wire   [5:0] joy_in = {USER_IN[6],USER_IN[3],USER_IN[5],USER_IN[7],USER_IN[1],USER_IN[2]};
+assign USER_OUT  = |status[31:30] ? {3'b111,joy_split,3'b111,joy_mdsel} : '1;
+assign USER_MODE = |status[31:30] ;
+
 assign LED_USER  = rom_download;
 assign LED_DISK  = 0;
 assign LED_POWER = 0;
@@ -113,6 +119,7 @@ localparam CONF_STR = {
 	"A.MCR3MONO;;",
 	"H0O1,Aspect Ratio,Original,Wide;",
 	"O35,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%,CRT 75%;",
+    "OUV,Serial SNAC DB9MD,Off,1 Player,2 Players;",	
 	"-;",
 	"h1O6,Control,Mode 1,Mode 2;",
 	"h1-;",
@@ -168,11 +175,30 @@ wire  [7:0] ioctl_index;
 
 wire [10:0] ps2_key;
 
-wire [15:0] joy1, joy2, joy3, joy4;
+wire [15:0] joy1_USB, joy2_USB, joy3_USB, joy4_USB;
 wire [15:0] joy = joy1 | joy2 | joy3 | joy4;
 wire [15:0] joy1a, joy2a, joy3a, joy4a;
 
+wire [15:0] joy1 = |status[31:30] ? {joydb9md_1[9],joydb9md_1[7],joydb9md_1[8],joydb9md_1[6:0]} : joy1_USB;
+wire [15:0] joy2 =  status[31]    ? {joydb9md_2[9],joydb9md_2[7],joydb9md_2[8],joydb9md_2[6:0]} : status[30] ? joy1_USB : joy2_USB;
+wire [15:0] joy3 =  status[31] ? joy1_USB : status[30] ? joy2_USB : joy3_USB;
+wire [15:0] joy4 =  status[31] ? joy2_USB : status[30] ? joy3_USB : joy4_USB;
+
+//SALIDA joystick[11:0]:
+//MZYXSCBAUDLR	
+
 wire [21:0] gamma_bus;
+
+reg [15:0] joydb9md_1,joydb9md_2;
+joy_db9md joy_db9md
+(
+  .clk       ( clk_sys    ), //35-50MHz
+  .joy_split ( joy_split  ),
+  .joy_mdsel ( joy_mdsel  ),
+  .joy_in    ( joy_in     ),
+  .joystick1 ( joydb9md_1 ),
+  .joystick2 ( joydb9md_2 )	  
+);
 
 hps_io #(.STRLEN($size(CONF_STR)>>3)) hps_io
 (
@@ -194,10 +220,10 @@ hps_io #(.STRLEN($size(CONF_STR)>>3)) hps_io
 	.ioctl_dout(ioctl_dout),
 	.ioctl_index(ioctl_index),
 
-	.joystick_0(joy1),
-	.joystick_1(joy2),
-	.joystick_2(joy3),
-	.joystick_3(joy4),
+	.joystick_0(joy1_USB),
+	.joystick_1(joy2_USB),
+	.joystick_2(joy3_USB),
+	.joystick_3(joy4_USB),
 
 	.joystick_analog_0(joy1a),
 	.joystick_analog_1(joy2a),
