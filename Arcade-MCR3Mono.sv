@@ -175,14 +175,14 @@ wire  [7:0] ioctl_index;
 
 wire [10:0] ps2_key;
 
-wire [15:0] joy1_USB, joy2_USB, joy3_USB, joy4_USB;
-wire [15:0] joy1 = |status[31:30] ? {5'b000000,joydb15_1[9:0]} : joy1_USB;
-wire [15:0] joy2 =  status[31]    ? {5'b000000,joydb15_2[9:0]} : status[30] ? joy1_USB : joy2_USB;
-wire [15:0] joy3 =  status[31] ? joy1_USB : status[30] ? joy2_USB : joy3_USB;
-wire [15:0] joy4 =  status[31] ? joy2_USB : status[30] ? joy3_USB : joy4_USB;
+wire [31:0] joy1_USB, joy2_USB, joy3_USB, joy4_USB;
+wire [31:0] joy1 = |status[31:30] ? {5'b000000,joydb15_1[9:0]} : joy1_USB;
+wire [31:0] joy2 =  status[31]    ? {5'b000000,joydb15_2[9:0]} : status[30] ? joy1_USB : joy2_USB;
+wire [31:0] joy3 =  status[31] ? joy1_USB : status[30] ? joy2_USB : joy3_USB;
+wire [31:0] joy4 =  status[31] ? joy2_USB : status[30] ? joy3_USB : joy4_USB;
 
-wire [15:0] joy = joy1 | joy2 | joy3 | joy4;
-wire [15:0] joy1a, joy2a, joy3a, joy4a;
+wire [31:0] joy = joy1 | joy2 | joy3 | joy4;
+wire [31:0] joy1a, joy2a, joy3a, joy4a;
 
 wire [21:0] gamma_bus;
 
@@ -332,6 +332,8 @@ wire m_fire1a  = btn_fireA  | joy1[4];
 wire m_fire1b  = btn_fireB  | joy1[5];
 wire m_fire1c  = btn_fireC  | joy1[6];
 wire m_fire1d  = btn_fireD  | joy1[7];
+wire m_spccw1  =              joy1[30];
+wire m_spcw1   =              joy1[31];
 
 wire m_coin2   = (mod_powerdrive | mod_stargrds)  & (btn_coin2 | joy2[9]);
 wire m_start2  = btn_start2 | joy2[8];
@@ -343,6 +345,8 @@ wire m_fire2a  = btn_fire2A | joy2[4];
 wire m_fire2b  = btn_fire2B | joy2[5];
 wire m_fire2c  = btn_fire2C | joy2[6];
 wire m_fire2d  = btn_fire2D | joy2[7];
+wire m_spccw2  =              joy2[30];
+wire m_spcw2   =              joy2[31];
 
 wire m_coin3   = (mod_powerdrive | mod_stargrds) & joy3[9];
 wire m_start3  = joy3[8];
@@ -354,6 +358,8 @@ wire m_fire3a  = joy3[4];
 wire m_fire3b  = joy3[5];
 wire m_fire3c  = joy3[6];
 wire m_fire3d  = joy3[7];
+wire m_spccw3  = joy3[30];
+wire m_spcw3   = joy3[31];
 
 wire m_coin4   = 0;
 wire m_start4  = joy4[8];
@@ -365,6 +371,8 @@ wire m_fire4a  = joy4[4];
 wire m_fire4b  = joy4[5];
 //wire m_fire4c  = joy4[6];
 //wire m_fire4d  = joy4[7];
+wire m_spccw4  = joy4[30];
+wire m_spcw4   = joy4[31];
 
 reg       sg; // Sounds Good board
 reg [7:0] input0;
@@ -733,10 +741,10 @@ spinner #(10) dd_wheel1
 (
 	.clk(clk_sys),
 	.reset(reset),
-	.minus(m_left1),
-	.plus(m_right1),
+	.minus(m_left1 | m_spccw1),
+	.plus(m_right1 | m_spcw1),
 	.strobe(VSync),
-	.use_spinner(status[6]),
+	.use_spinner(status[6] | m_spccw1 | m_spcw1),
 	.spin_angle(ddwh1)
 );
 
@@ -745,10 +753,10 @@ spinner #(10) dd_wheel2
 (
 	.clk(clk_sys),
 	.reset(reset),
-	.minus(m_left2),
-	.plus(m_right2),
+	.minus(m_left2 | m_spccw2),
+	.plus(m_right2 | m_spcw2),
 	.strobe(VSync),
-	.use_spinner(status[7]),
+	.use_spinner(status[7] | m_spccw2 | m_spcw2),
 	.spin_angle(ddwh2)
 );
 
@@ -757,10 +765,10 @@ spinner #(10) dd_wheel3
 (
 	.clk(clk_sys),
 	.reset(reset),
-	.minus(m_left3),
-	.plus(m_right3),
+	.minus(m_left3 | m_spccw3),
+	.plus(m_right3 | m_spcw3),
 	.strobe(VSync),
-	.use_spinner(status[8]),
+	.use_spinner(status[8] | m_spccw3 | m_spcw3),
 	.spin_angle(ddwh3)
 );
 
@@ -769,10 +777,10 @@ spinner #(10) dd_wheel4
 (
 	.clk(clk_sys),
 	.reset(reset),
-	.minus(m_left4),
-	.plus(m_right4),
+	.minus(m_left4 | m_spccw4),
+	.plus(m_right4 | m_spcw4),
 	.strobe(VSync),
-	.use_spinner(status[9]),
+	.use_spinner(status[9] | m_spccw4 | m_spcw4),
 	.spin_angle(ddwh4)
 );
 
