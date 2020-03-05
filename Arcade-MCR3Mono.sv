@@ -176,10 +176,10 @@ wire [15:0] joy1a, joy2a, joy3a, joy4a;
 wire  [8:0] sp1, sp2, sp3, sp4;
 wire  [7:0] pd1, pd2;
 
-wire [15:0] joy1 = |status[31:30] ? {joydb9md_1[9],joydb9md_1[7],joydb9md_1[8],joydb9md_1[6:0]} : joy1_USB;
-wire [15:0] joy2 =  status[31]    ? {joydb9md_2[9],joydb9md_2[7],joydb9md_2[8],joydb9md_2[6:0]} : status[30] ? joy1_USB : joy2_USB;
-wire [15:0] joy3 =  status[31] ? joy1_USB : status[30] ? joy2_USB : joy3_USB;
-wire [15:0] joy4 =  status[31] ? joy2_USB : status[30] ? joy3_USB : joy4_USB;
+wire [31:0] joy1 = |status[31:30] ? {joydb9md_1[9],joydb9md_1[7],joydb9md_1[8],joydb9md_1[6:0]} : joy1_USB;
+wire [31:0] joy2 =  status[31]    ? {joydb9md_2[9],joydb9md_2[7],joydb9md_2[8],joydb9md_2[6:0]} : status[30] ? joy1_USB : joy2_USB;
+wire [31:0] joy3 =  status[31] ? joy1_USB : status[30] ? joy2_USB : joy3_USB;
+wire [31:0] joy4 =  status[31] ? joy2_USB : status[30] ? joy3_USB : joy4_USB;
 
 //SALIDA joystick[11:0]:
 //MZYXSCBAUDLR	
