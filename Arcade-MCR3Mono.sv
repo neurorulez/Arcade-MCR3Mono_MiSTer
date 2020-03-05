@@ -123,15 +123,10 @@ localparam CONF_STR = {
 	"-;",
 	"h1O6,Control,Mode 1,Mode 2;",
 	"h1-;",
-	"h2O6,Control 1P,Buttons,Spinner;",
-	"h2O7,Control 2P,Buttons,Spinner;",
-	"h2O8,Control 3P,Buttons,Spinner;",
-	"h2O9,Control 4P,Buttons,Spinner;",
-	"h2-;",
 	"h3O6,Gas 1P,Buttons,Analog Y;",
-	"h3O7,Steering 1P,Buttons,Analog X;",
-	"h3O8,Gas 2P,Buttons,Analog Y;",
-	"h3O9,Steering 2P,Buttons,Analog X;",
+	"h3O78,Steering 1P,Buttons,Analog X,Paddle;",
+	"h3O9,Gas 2P,Buttons,Analog Y;",
+	"h3OAB,Steering 2P,Buttons,Analog X,Paddle;",
 	"h3-;",
 	"h4O6,Fire 1P,4Way,Fly+Fire;",
 	"h4O7,Fire 2P,4Way,Fly+Fire;",
@@ -175,9 +170,11 @@ wire  [7:0] ioctl_index;
 
 wire [10:0] ps2_key;
 
-wire [15:0] joy1_USB, joy2_USB, joy3_USB, joy4_USB;
-wire [15:0] joy = joy1 | joy2 | joy3 | joy4;
+wire [31:0] joy1_USB, joy2_USB, joy3_USB, joy4_USB;
+wire [31:0] joy = joy1 | joy2 | joy3 | joy4;
 wire [15:0] joy1a, joy2a, joy3a, joy4a;
+wire  [8:0] sp1, sp2, sp3, sp4;
+wire  [7:0] pd1, pd2;
 
 wire [15:0] joy1 = |status[31:30] ? {joydb9md_1[9],joydb9md_1[7],joydb9md_1[8],joydb9md_1[6:0]} : joy1_USB;
 wire [15:0] joy2 =  status[31]    ? {joydb9md_2[9],joydb9md_2[7],joydb9md_2[8],joydb9md_2[6:0]} : status[30] ? joy1_USB : joy2_USB;
@@ -229,6 +226,14 @@ hps_io #(.STRLEN($size(CONF_STR)>>3)) hps_io
 	.joystick_analog_1(joy2a),
 	.joystick_analog_2(joy3a),
 	.joystick_analog_3(joy4a),
+	
+	.spinner_0(sp1),
+	.spinner_1(sp2),
+	.spinner_2(sp3),
+	.spinner_3(sp4),
+
+	.paddle_0(pd1),
+	.paddle_1(pd2),
 
 	.ps2_key(ps2_key)
 );
@@ -335,6 +340,8 @@ wire m_fire1a  = btn_fireA  | joy1[4];
 wire m_fire1b  = btn_fireB  | joy1[5];
 wire m_fire1c  = btn_fireC  | joy1[6];
 wire m_fire1d  = btn_fireD  | joy1[7];
+wire m_spccw1  =              joy1[30];
+wire m_spcw1   =              joy1[31];
 
 wire m_coin2   = (mod_powerdrive | mod_stargrds)  & (btn_coin2 | joy2[9]);
 wire m_start2  = btn_start2 | joy2[8];
@@ -346,6 +353,8 @@ wire m_fire2a  = btn_fire2A | joy2[4];
 wire m_fire2b  = btn_fire2B | joy2[5];
 wire m_fire2c  = btn_fire2C | joy2[6];
 wire m_fire2d  = btn_fire2D | joy2[7];
+wire m_spccw2  =              joy2[30];
+wire m_spcw2   =              joy2[31];
 
 wire m_coin3   = (mod_powerdrive | mod_stargrds) & joy3[9];
 wire m_start3  = joy3[8];
@@ -357,6 +366,8 @@ wire m_fire3a  = joy3[4];
 wire m_fire3b  = joy3[5];
 wire m_fire3c  = joy3[6];
 wire m_fire3d  = joy3[7];
+wire m_spccw3  = joy3[30];
+wire m_spcw3   = joy3[31];
 
 wire m_coin4   = 0;
 wire m_start4  = joy4[8];
@@ -368,6 +379,8 @@ wire m_fire4a  = joy4[4];
 wire m_fire4b  = joy4[5];
 //wire m_fire4c  = joy4[6];
 //wire m_fire4d  = joy4[7];
+wire m_spccw4  = joy4[30];
+wire m_spcw4   = joy4[31];
 
 reg       sg; // Sounds Good board
 reg [7:0] input0;
@@ -676,10 +689,10 @@ reg [7:0] maxrpm_adc_data;
 reg [3:0] maxrpm_adc_control;
 always @(*) begin
 	case (maxrpm_adc_control[1:0])
-		2'b00: maxrpm_adc_data = status[8] ? gas2a : gas2;
+		2'b00: maxrpm_adc_data = status[9] ? gas2a : gas2;
 		2'b01: maxrpm_adc_data = status[6] ? gas1a : gas1;
-		2'b10: maxrpm_adc_data = status[9] ? steering2a : steering2;
-		2'b11: maxrpm_adc_data = status[7] ? steering1a : steering1;
+		2'b10: maxrpm_adc_data = !status[11:10] ? steering2 : status[10] ? steering2x : steering2p;
+		2'b11: maxrpm_adc_data = !status[08:07] ? steering1 : status[07] ? steering1x : steering1p;
 	endcase
 end
 
@@ -688,8 +701,11 @@ always @(posedge clk_sys) if (~output6[6] & ~output6[5]) maxrpm_adc_control <= o
 wire [7:0] gas1a = joy1a[15] ? {joy1a[14:8],1'b1} : 8'hFF;
 wire [7:0] gas2a = joy2a[15] ? {joy2a[14:8],1'b1} : 8'hFF;
 
-wire [7:0] steering1a = 8'h74 - {joy1a[7],joy1a[7:1]};
-wire [7:0] steering2a = 8'h74 + {joy2a[7],joy2a[7:1]};
+wire [7:0] steering1x = 8'h74 - {joy1a[7],joy1a[7:1]};
+wire [7:0] steering2x = 8'h74 + {joy2a[7],joy2a[7:1]};
+
+wire [7:0] steering1p = 8'h74 - {~pd1[7],~pd1[7],pd1[6:1]};
+wire [7:0] steering2p = 8'h74 + {~pd2[7],~pd2[7],pd2[6:1]};
 
 wire [7:0] gas1;
 wire [7:0] steering1;
@@ -732,51 +748,51 @@ maxrpm_pl2
 
 // Demolition Derby
 wire [5:0] ddwh1;
-spinner #(10) dd_wheel1
+spinner #(10,0,10) dd_wheel1
 (
 	.clk(clk_sys),
 	.reset(reset),
-	.minus(m_left1),
-	.plus(m_right1),
+	.minus(m_left1 | m_spccw1),
+	.plus(m_right1 | m_spcw1),
 	.strobe(VSync),
-	.use_spinner(status[6]),
-	.spin_angle(ddwh1)
+	.spin_in(sp1),
+	.spin_out(ddwh1)
 );
 
 wire [5:0] ddwh2;
-spinner #(10) dd_wheel2
+spinner #(10,0,10) dd_wheel2
 (
 	.clk(clk_sys),
 	.reset(reset),
-	.minus(m_left2),
-	.plus(m_right2),
+	.minus(m_left2 | m_spccw2),
+	.plus(m_right2 | m_spcw2),
 	.strobe(VSync),
-	.use_spinner(status[7]),
-	.spin_angle(ddwh2)
+	.spin_in(sp2),
+	.spin_out(ddwh2)
 );
 
 wire [5:0] ddwh3;
-spinner #(10) dd_wheel3
+spinner #(10,0,10) dd_wheel3
 (
 	.clk(clk_sys),
 	.reset(reset),
-	.minus(m_left3),
-	.plus(m_right3),
+	.minus(m_left3 | m_spccw3),
+	.plus(m_right3 | m_spcw3),
 	.strobe(VSync),
-	.use_spinner(status[8]),
-	.spin_angle(ddwh3)
+	.spin_in(sp3),
+	.spin_out(ddwh3)
 );
 
 wire [5:0] ddwh4;
-spinner #(10) dd_wheel4
+spinner #(10,0,10) dd_wheel4
 (
 	.clk(clk_sys),
 	.reset(reset),
-	.minus(m_left4),
-	.plus(m_right4),
+	.minus(m_left4 | m_spccw4),
+	.plus(m_right4 | m_spcw4),
 	.strobe(VSync),
-	.use_spinner(status[9]),
-	.spin_angle(ddwh4)
+	.spin_in(sp4),
+	.spin_out(ddwh4)
 );
 
 endmodule
